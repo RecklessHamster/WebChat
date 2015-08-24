@@ -1,0 +1,71 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>SignalR Simple Chat</title>
+    <link rel="stylesheet" type="text/css" href="stylesheet.css">
+</head>
+<body>
+    <div id="heading">SignalR Chatroom</div>
+    <div class="container">
+        <input type="text" id="message" />
+        <input type="button" id="sendmessage" value="Send" />
+        <input type="hidden" id="displayname" />
+        <ul id="chat"></ul>
+        
+    </div>
+    <div class="container"><ul id="onlineUsers"></ul></div>
+    <!--Script references. -->
+    <script src="Scripts/jquery-1.10.2.min.js"></script>
+    <script src="Scripts/jquery.signalR-2.1.2.min.js"></script>
+    <script src="signalr/hubs"></script>
+    <script type="text/javascript">
+        $(function () {
+            var isRegistered = false;
+            //Proxy Connection
+            var chat = $.connection.chatHub;
+            // Function for the backend to call to broadcast messages
+            chat.client.broadcastMessage = function (name, message) {
+                var clientName = $('<div />').text(name).html();
+                var clientMsg = $('<div />').text(message).html();
+                $('#chat').append('<li><strong>' + clientName
+                    + '</strong>:&nbsp;&nbsp;' + clientMsg + '</li>');
+            };
+            chat.client.updateUsers = function (data) {
+                data = JSON.parse(data);
+                $('#onlineUsers').empty();
+                $('#onlineUsers').append('<li><strong>Online Users</strong></li>');
+                for (var i in data) {                    
+                    $('#onlineUsers').append('<li>' + data[i].Name + '</li>');
+                    
+                }
+                
+            };
+            
+            // Get the user name and store it to prepend to messages.
+            $('#displayname').val(prompt('Enter your name:', ''));
+            //Register the user with the server
+           
+            // Set initial focus to message input box.
+            $('#message').focus();
+            // Start the connection.
+            $.connection.hub.start().done(function () {
+                $('#sendmessage').click(function () {
+                    //see if user is registered, if not register
+                    if (isRegistered == false)
+                    {
+                        chat.server.registerUser($('#displayname').val());
+                        isRegistered = true;
+                    }
+                    // Call the Send method on the hub.
+                    chat.server.send($('#displayname').val(), $('#message').val());
+                    // Clear text box and reset focus for next comment.
+                    $('#message').val('').focus();                   
+                    chat.server.numberofUsers().done(function (data) {
+                        //$('#onlineUsers').append("Online: " + data);
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>
